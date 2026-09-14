@@ -148,7 +148,7 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                 if (opp.salaryOrStipend != null)
                   Text(
                     opp.salaryOrStipend!,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.emerald),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
                   ),
               ],
             ),

@@ -125,7 +125,7 @@ class _CombinedDashboardScreenState extends State<CombinedDashboardScreen> {
                       r.displayName,
                       style: TextStyle(
                         fontWeight: r == currentRole ? FontWeight.bold : FontWeight.normal,
-                        color: r == currentRole ? const Color(0xFF991B1B) : Colors.black800,
+                        color: r == currentRole ? const Color(0xFF991B1B) : Colors.black,
                       ),
                     ),
                   ],
@@ -300,7 +300,7 @@ class _CombinedDashboardScreenState extends State<CombinedDashboardScreen> {
           children: [
             Expanded(child: _buildStatCard('Total Alumni', '${repo.users.length * 450}+', Icons.groups, Colors.blue)),
             const SizedBox(width: 10),
-            Expanded(child: _buildStatCard('Active Chapters', '${repo.chapters.length}', Icons.public, Colors.emerald)),
+            Expanded(child: _buildStatCard('Active Chapters', '${repo.chapters.length}', Icons.public, const Color(0xFF10B981))),
             const SizedBox(width: 10),
             Expanded(child: _buildStatCard('Open Careers', '${repo.opportunities.length}', Icons.work, Colors.amber)),
           ],
@@ -439,7 +439,7 @@ class _CombinedDashboardScreenState extends State<CombinedDashboardScreen> {
 
         Row(
           children: [
-            Expanded(child: _buildStatCard('Grad Tracer Success', '94.2%', Icons.trending_up, Colors.emerald)),
+            Expanded(child: _buildStatCard('Grad Tracer Success', '94.2%', Icons.trending_up, const Color(0xFF10B981))),
             const SizedBox(width: 10),
             Expanded(child: _buildStatCard('Alumni Lecturers', '18', Icons.record_voice_over, Colors.teal)),
           ],
@@ -685,7 +685,7 @@ class _CombinedDashboardScreenState extends State<CombinedDashboardScreen> {
               isThreeLine: true,
               trailing: Switch(
                 value: u.isVerified,
-                activeColor: Colors.emerald,
+                activeColor: const Color(0xFF10B981),
                 onChanged: (val) {
                   repo.toggleUserVerification(u.uid);
                 },
@@ -951,7 +951,7 @@ class _CombinedDashboardScreenState extends State<CombinedDashboardScreen> {
                 if (opp.salaryOrStipend != null)
                   Text(
                     opp.salaryOrStipend!,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.emerald),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: const Color(0xFF10B981)),
                   ),
               ],
             ),

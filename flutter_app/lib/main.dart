@@ -39,7 +39,7 @@ class CeciliansAlumniApp extends StatelessWidget {
           foregroundColor: Color(0xFF111827),
           elevation: 0,
         ),
-        cardTheme: CardTheme(
+        cardTheme: CardThemeData(
           color: Colors.white,
           elevation: 0.5,
           shape: RoundedRectangleBorder(
