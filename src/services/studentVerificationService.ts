@@ -740,7 +740,103 @@ function mapRowsToStudentRecords(rows: any[]): StudentVerificationRecord[] {
 }
 
 /**
- * Downloads a pre-formatted CSV template for the Registrar
+ * Curated list of test student records available for instant CSV/Excel export
+ * and actual registration testing
+ */
+export const SAMPLE_TEST_STUDENTS: Array<{
+  studentId: string;
+  fullName: string;
+  batchYear: string;
+  course: string;
+  status: 'Graduated' | 'Enrolled' | 'Alumni';
+  honors: string;
+  email: string;
+  phone: string;
+}> = [
+  {
+    studentId: 'SC-2024-1001',
+    fullName: 'Alexander James Morales',
+    batchYear: '2024',
+    course: 'B.S. Information Technology',
+    status: 'Graduated',
+    honors: 'Summa Cum Laude, Best Capstone Lead',
+    email: 'alex.morales@alumni.stcecilia.edu',
+    phone: '+63 917 123 4567'
+  },
+  {
+    studentId: 'SC-2024-1002',
+    fullName: 'Patricia Anne Navarro',
+    batchYear: '2024',
+    course: 'B.S. Computer Science',
+    status: 'Graduated',
+    honors: 'Magna Cum Laude',
+    email: 'patricia.navarro@alumni.stcecilia.edu',
+    phone: '+63 918 234 5678'
+  },
+  {
+    studentId: 'SC-2024-1003',
+    fullName: 'Christian Dave Velasco',
+    batchYear: '2024',
+    course: 'B.S. Accountancy',
+    status: 'Graduated',
+    honors: 'Cum Laude, CPA Board Candidate',
+    email: 'cd.velasco@alumni.stcecilia.edu',
+    phone: '+63 919 345 6789'
+  },
+  {
+    studentId: 'SC-2025-2001',
+    fullName: 'Janelle Therese Ramos',
+    batchYear: '2025',
+    course: 'B.S. Nursing',
+    status: 'Graduated',
+    honors: 'Dean’s Lister, Clinical Excellence',
+    email: 'janelle.ramos@alumni.stcecilia.edu',
+    phone: '+63 920 456 7890'
+  },
+  {
+    studentId: 'SC-2025-2002',
+    fullName: 'Miguel Rafael Gutierrez',
+    batchYear: '2025',
+    course: 'B.S. Business Administration',
+    status: 'Graduated',
+    honors: 'Leadership Excellence Award',
+    email: 'miguel.gutierrez@alumni.stcecilia.edu',
+    phone: '+63 921 567 8901'
+  },
+  {
+    studentId: 'SC-2026-3001',
+    fullName: 'Samantha Rose Del Rosario',
+    batchYear: '2026',
+    course: 'B.S. Information Technology',
+    status: 'Graduated',
+    honors: 'Outstanding Software Project',
+    email: 'samantha.delrosario@alumni.stcecilia.edu',
+    phone: '+63 922 678 9012'
+  },
+  {
+    studentId: 'SC-2026-3002',
+    fullName: 'Francis Kenneth Aquino',
+    batchYear: '2026',
+    course: 'B.S. Hospitality Management',
+    status: 'Graduated',
+    honors: 'Presidential Scholar',
+    email: 'francis.aquino@alumni.stcecilia.edu',
+    phone: '+63 923 789 0123'
+  },
+  {
+    studentId: 'SC-2023-4001',
+    fullName: 'Katrina Marie Mendoza',
+    batchYear: '2023',
+    course: 'B.S. Education',
+    status: 'Graduated',
+    honors: 'Magna Cum Laude',
+    email: 'katrina.mendoza@alumni.stcecilia.edu',
+    phone: '+63 924 890 1234'
+  }
+];
+
+/**
+ * Downloads a pre-formatted CSV template populated with ready-to-test student records
  */
 export function downloadSampleCsvTemplate(): void {
   const headers = [
@@ -750,62 +846,183 @@ export function downloadSampleCsvTemplate(): void {
     'Course',
     'Status',
     'Honors',
-    'Email Address'
+    'Email Address',
+    'Contact Phone'
   ];
 
-  const sampleRows = [
-    [
-      'SC-2022-0891',
-      'Gabriel Christian Cruz',
-      '2026',
-      'B.S. Information Technology',
-      'Graduated',
-      'Magna Cum Laude',
-      'gabriel.cruz@stcecilia.edu'
-    ],
-    [
-      'SC-2022-0945',
-      'Samantha Joy Villanueva',
-      '2026',
-      'B.S. Computer Science',
-      'Graduated',
-      'Best Capstone Award',
-      'samantha.villanueva@stcecilia.edu'
-    ],
-    [
-      'SC-2021-0412',
-      'Mark Anthony Lim',
-      '2025',
-      'B.S. Accountancy',
-      'Graduated',
-      'Dean’s Honor List',
-      'mark.lim@stcecilia.edu'
-    ],
-    [
-      'SC-2021-0733',
-      'Hannah Beatrice Perez',
-      '2025',
-      'B.S. Hospitality Management',
-      'Graduated',
-      'Cum Laude',
-      'hannah.perez@stcecilia.edu'
-    ]
-  ];
+  const sampleRows = SAMPLE_TEST_STUDENTS.map((s) => [
+    s.studentId,
+    s.fullName,
+    s.batchYear,
+    s.course,
+    s.status,
+    s.honors,
+    s.email,
+    s.phone
+  ]);
 
   const csvContent = [
     headers.join(','),
-    ...sampleRows.map((row) => row.map((val) => `"${val.replace(/"/g, '""')}"`).join(','))
+    ...sampleRows.map((row) => row.map((val) => `"${String(val).replace(/"/g, '""')}"`).join(','))
   ].join('\n');
 
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.setAttribute('href', url);
-  link.setAttribute('download', 'st_cecilias_graduates_registry_template.csv');
+  link.setAttribute('download', 'st_cecilias_students_masterlist_template.csv');
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+/**
+ * Downloads a pre-formatted Excel (.xlsx) file populated with ready-to-test student records
+ */
+export function downloadSampleExcelTemplate(): void {
+  const data = SAMPLE_TEST_STUDENTS.map((s) => ({
+    'Student ID': s.studentId,
+    'Full Name': s.fullName,
+    'Batch Year': s.batchYear,
+    'Course': s.course,
+    'Status': s.status,
+    'Honors': s.honors,
+    'Email Address': s.email,
+    'Contact Phone': s.phone
+  }));
+
+  const worksheet = XLSX.utils.json_to_sheet(data);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Students Masterlist');
+
+  // Auto-size columns for clear readability
+  worksheet['!cols'] = [
+    { wch: 16 }, // Student ID
+    { wch: 30 }, // Full Name
+    { wch: 12 }, // Batch Year
+    { wch: 32 }, // Course
+    { wch: 14 }, // Status
+    { wch: 32 }, // Honors
+    { wch: 36 }, // Email Address
+    { wch: 20 }  // Phone
+  ];
+
+  XLSX.writeFile(workbook, 'st_cecilias_students_masterlist_template.xlsx');
+}
+
+export interface BulkImportOptions {
+  deduplicationMode: 'merge' | 'skip_existing' | 'overwrite';
+  uploadedBy?: string;
+  sourceFile?: string;
+  onProgress?: (processed: number, total: number) => void;
+}
+
+export interface BulkImportResult {
+  totalParsed: number;
+  importedToFirestore: number;
+  updatedCount: number;
+  skippedCount: number;
+  invalidCount: number;
+  readyStudentIds: Array<{ studentId: string; fullName: string; batchYear: string; course: string }>;
+}
+
+/**
+ * Performs atomic bulk import of validated student records into Firestore database and local cache
+ */
+export async function bulkImportStudentsToFirestore(
+  records: StudentVerificationRecord[],
+  options: BulkImportOptions
+): Promise<BulkImportResult> {
+  const existing = getRegistrarRecords();
+  const existingMap = new Map<string, StudentVerificationRecord>();
+  existing.forEach((r) => {
+    existingMap.set(normalizeStudentId(r.studentId).toUpperCase(), r);
+  });
+
+  const now = new Date().toISOString();
+  const recordsToWriteToFirestore: StudentVerificationRecord[] = [];
+  const readyStudentIds: Array<{ studentId: string; fullName: string; batchYear: string; course: string }> = [];
+
+  let importedToFirestore = 0;
+  let updatedCount = 0;
+  let skippedCount = 0;
+  let invalidCount = 0;
+
+  for (const raw of records) {
+    const normId = normalizeStudentId(raw.studentId).toUpperCase();
+    if (!normId || !raw.fullName?.trim()) {
+      invalidCount++;
+      continue;
+    }
+
+    const exists = existingMap.has(normId);
+
+    if (exists && options.deduplicationMode === 'skip_existing') {
+      skippedCount++;
+      continue;
+    }
+
+    const current = exists ? existingMap.get(normId)! : null;
+
+    const consolidated: StudentVerificationRecord = {
+      ...raw,
+      studentId: normId,
+      fullName: raw.fullName.trim(),
+      batchYear: raw.batchYear ? String(raw.batchYear).trim() : (current?.batchYear || '2024'),
+      course: raw.course ? raw.course.trim() : (current?.course || 'Bachelor Degree Program'),
+      status: raw.status || current?.status || 'Graduated',
+      honors: raw.honors || current?.honors || undefined,
+      email: raw.email || current?.email || undefined,
+      phone: raw.phone || current?.phone || undefined,
+      isRegistered: current?.isRegistered ?? false,
+      registeredAt: current?.registeredAt,
+      matchedUid: current?.matchedUid,
+      uploadedAt: now,
+      uploadedBy: options.uploadedBy || 'Registrar Bulk CSV Utility',
+      sourceFile: options.sourceFile || 'bulk_import.csv'
+    };
+
+    recordsToWriteToFirestore.push(consolidated);
+    existingMap.set(normId, consolidated);
+
+    if (exists) {
+      updatedCount++;
+    } else {
+      importedToFirestore++;
+    }
+
+    if (readyStudentIds.length < 10) {
+      readyStudentIds.push({
+        studentId: consolidated.studentId,
+        fullName: consolidated.fullName,
+        batchYear: consolidated.batchYear,
+        course: consolidated.course
+      });
+    }
+  }
+
+  // Update local storage cache immediately
+  const finalLocalRecords = Array.from(existingMap.values());
+  saveRegistrarRecords(finalLocalRecords);
+
+  // Write batch into Firestore database with progress callback
+  if (recordsToWriteToFirestore.length > 0) {
+    await saveRegistryRecordsBatchToFirestore(recordsToWriteToFirestore, (processed, total) => {
+      if (options.onProgress) {
+        options.onProgress(processed, total);
+      }
+    });
+  }
+
+  return {
+    totalParsed: records.length,
+    importedToFirestore,
+    updatedCount,
+    skippedCount,
+    invalidCount,
+    readyStudentIds
+  };
 }
 
 /**

@@ -32,6 +32,7 @@ import {
   deleteRegistrarRecord,
   parseRegistrarFile,
   downloadSampleCsvTemplate,
+  downloadSampleExcelTemplate,
   findRegistryMatch,
   resetRegistrarRecords,
   exportRegistryRecordsToCsv,
@@ -39,6 +40,7 @@ import {
   DEFAULT_REGISTRAR_RECORDS
 } from '../../services/studentVerificationService';
 import { useAlumni } from '../../context/AlumniContext';
+import { CsvStudentBulkImporter } from './CsvStudentBulkImporter';
 
 export const RegistrarRegistryMatcher: React.FC = () => {
   const { users, currentUser, showToast, addAuditLog, setSelectedUserIdForModal } = useAlumni();
@@ -55,6 +57,7 @@ export const RegistrarRegistryMatcher: React.FC = () => {
     fileName: string;
     items: StudentVerificationRecord[];
   } | null>(null);
+  const [showBulkImporter, setShowBulkImporter] = useState(true);
 
   // Help modal state
   const [showHelpModal, setShowHelpModal] = useState(false);
@@ -309,11 +312,18 @@ export const RegistrarRegistryMatcher: React.FC = () => {
 
           <div className="mt-4 flex flex-wrap items-center gap-2.5 text-xs">
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+              onClick={() => setShowBulkImporter((prev) => !prev)}
+              className={`px-4 py-2 font-bold rounded-xl shadow-xs transition-colors flex items-center gap-2 cursor-pointer ${
+                showBulkImporter
+                  ? 'bg-amber-400 hover:bg-amber-300 text-stone-900 ring-2 ring-amber-300'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
             >
-              <Upload className="w-4 h-4" />
-              <span>Upload CSV / Excel File</span>
+              <FileSpreadsheet className="w-4 h-4" />
+              <span>{showBulkImporter ? 'Hide Bulk Importer' : 'Bulk CSV/Excel Importer Utility'}</span>
+              <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-black/15 rounded-md">
+                Firestore
+              </span>
             </button>
 
             <button
@@ -340,9 +350,19 @@ export const RegistrarRegistryMatcher: React.FC = () => {
             <button
               onClick={downloadSampleCsvTemplate}
               className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Download sample CSV file for student registry"
             >
               <Download className="w-4 h-4" />
-              <span>Template</span>
+              <span>Sample CSV</span>
+            </button>
+
+            <button
+              onClick={downloadSampleExcelTemplate}
+              className="px-3.5 py-2 bg-white/10 hover:bg-white/20 text-white font-semibold rounded-xl border border-white/20 transition-colors flex items-center gap-1.5 cursor-pointer"
+              title="Download sample Excel (.xlsx) file for student registry"
+            >
+              <FileDown className="w-4 h-4 text-emerald-300" />
+              <span>Sample Excel</span>
             </button>
 
             <button
@@ -363,6 +383,16 @@ export const RegistrarRegistryMatcher: React.FC = () => {
           className="hidden"
         />
       </div>
+
+      {/* CSV & Excel File Upload and Firestore Bulk Import Utility */}
+      {showBulkImporter && (
+        <CsvStudentBulkImporter
+          onImportComplete={() => {
+            refreshRecords();
+          }}
+          onClose={() => setShowBulkImporter(false)}
+        />
+      )}
 
       {/* KPI Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

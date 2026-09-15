@@ -9,6 +9,8 @@ import {
   AlumniEvent,
   Announcement,
   Opportunity,
+  JobApplication,
+  ApplicationStatus,
   Chapter,
   CareerMilestone,
   UserNotificationSettings,
@@ -32,6 +34,7 @@ import {
   INITIAL_EVENTS,
   INITIAL_ANNOUNCEMENTS,
   INITIAL_OPPORTUNITIES,
+  INITIAL_JOB_APPLICATIONS,
   INITIAL_CHAPTERS,
   INITIAL_MILESTONES,
   INITIAL_GALLERY_ITEMS,
@@ -98,6 +101,8 @@ interface AlumniContextType {
     canAccessAdminPanel: boolean;
     canMessageAnyone: boolean;
     canUploadGallery: boolean;
+    canManageJobModeration: boolean;
+    canPostJobs: boolean;
   };
 
   // Auth & Session
@@ -151,9 +156,16 @@ interface AlumniContextType {
   editAnnouncement: (id: string, data: Partial<Announcement>) => void;
   deleteAnnouncement: (id: string) => void;
 
-  // Opportunities
+  // Opportunities & Career Portal
+  jobApplications: JobApplication[];
   createOpportunity: (data: Omit<Opportunity, 'id' | 'createdAt' | 'postedBy' | 'posterName' | 'status'>) => void;
+  updateOpportunity: (id: string, data: Partial<Opportunity>) => void;
   deleteOpportunity: (id: string) => void;
+  approveOpportunity: (id: string) => void;
+  rejectOpportunity: (id: string, reason: string) => void;
+  applyForJob: (data: Omit<JobApplication, 'id' | 'appliedAt' | 'status'>) => { success: boolean; error?: string };
+  updateApplicationStatus: (applicationId: string, status: ApplicationStatus, notes?: string) => void;
+  verifyEmployer: (employerUid: string, verified: boolean, notes?: string) => void;
 
   // Notifications
   unreadNotificationsCount: number;
@@ -217,6 +229,7 @@ const STORAGE_KEYS = {
   EVENTS: 'alumni_events_v4',
   ANNOUNCEMENTS: 'alumni_announcements_v4',
   OPPORTUNITIES: 'alumni_opportunities_v4',
+  APPLICATIONS: 'alumni_job_applications_v4',
   CHAPTERS: 'alumni_chapters_v4',
   MILESTONES: 'alumni_milestones_v4',
   FOLLOWING: 'alumni_following_v4',
@@ -379,6 +392,16 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       }));
     } catch {
       return INITIAL_OPPORTUNITIES;
+    }
+  });
+
+  const [jobApplications, setJobApplications] = useState<JobApplication[]>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEYS.APPLICATIONS);
+      const parsed = saved ? JSON.parse(saved) : INITIAL_JOB_APPLICATIONS;
+      return Array.isArray(parsed) ? parsed : INITIAL_JOB_APPLICATIONS;
+    } catch {
+      return INITIAL_JOB_APPLICATIONS;
     }
   });
 
@@ -570,6 +593,10 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.OPPORTUNITIES, JSON.stringify(opportunities));
   }, [opportunities]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(jobApplications));
+  }, [jobApplications]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CHAPTERS, JSON.stringify(chapters));
@@ -884,7 +911,11 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
       // Message anyone: All authenticated users
       canMessageAnyone: Boolean(currentUser),
       // Campus & Heritage Gallery: admin, superadmin, registrar
-      canUploadGallery: ['admin', 'superadmin', 'registrar'].includes(role || '')
+      canUploadGallery: ['admin', 'superadmin', 'registrar'].includes(role || ''),
+      // Manage Job Moderation & Approval: admin, superadmin, staff, registrar, moderator
+      canManageJobModeration: ['admin', 'superadmin', 'staff', 'registrar', 'moderator'].includes(role || ''),
+      // Post Jobs: admin, employer, alumni, staff, registrar
+      canPostJobs: ['admin', 'superadmin', 'staff', 'registrar', 'employer', 'alumni'].includes(role || '')
     };
   }, [currentUser]);
 
@@ -1019,27 +1050,34 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     }
     const newUser: UserProfile = {
       uid: newUid,
-      name: data.name || 'Juan Dela Cruz',
-      email: data.email || `alumni_${Date.now()}@stcecilia.edu`,
+      name: data.name || (role === 'employer' ? data.companyName || 'Corporate Partner' : 'Juan Dela Cruz'),
+      email: data.email || `${role === 'employer' ? 'careers' : 'alumni'}_${Date.now()}@stcecilia.edu`,
       password: data.password || 'Password123!',
       role,
       batch: data.batch || (role === 'alumni' ? '2024' : 'N/A'),
-      course: data.course || (role === 'alumni' ? 'B.S. Information Technology' : 'Campus Administration & Services'),
-      location: data.location || 'Cebu, Philippines',
+      course: data.course || (role === 'alumni' ? 'B.S. Information Technology' : role === 'employer' ? 'Corporate Industry Partner' : 'Campus Administration & Services'),
+      location: data.location || (role === 'employer' ? 'Cebu City, Philippines' : 'Cebu, Philippines'),
       studentId: data.studentId || (role === 'alumni' ? `SC-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}` : undefined),
       employeeId: data.employeeId,
       department: data.department,
-      profilePictureUrl: data.profilePictureUrl || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80',
+      companyName: data.companyName,
+      companyIndustry: data.companyIndustry,
+      companyWebsite: data.companyWebsite,
+      companyAddress: data.companyAddress,
+      contactPerson: data.contactPerson,
+      contactPhone: data.contactPhone,
+      employerVerificationStatus: role === 'employer' ? 'pending_verification' : undefined,
+      profilePictureUrl: data.profilePictureUrl || (role === 'employer' ? 'https://images.unsplash.com/photo-1549923746-c502d488b3ea?w=400&auto=format&fit=crop&q=80' : 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&auto=format&fit=crop&q=80'),
       coverPhotoUrl: data.coverPhotoUrl || 'https://images.unsplash.com/photo-1541339907198-e08756dedf3f?w=1200&auto=format&fit=crop&q=80',
-      headline: data.headline || `${role === 'alumni' ? (data.course || 'Alumni') + ' Graduate' : role.toUpperCase() + ' Specialist'} • St. Cecilia’s College`,
-      about: data.about || 'Excited to be part of the St. Cecilia’s College alumni and institutional community.',
-      phone: data.phone || '+63 917 123 4567',
-      isVerified: data.isVerified ?? false,
+      headline: data.headline || (role === 'employer' ? `Hiring Partner • ${data.companyName || 'Corporate Partner'}` : `${role === 'alumni' ? (data.course || 'Alumni') + ' Graduate' : role.toUpperCase() + ' Specialist'} • St. Cecilia’s College`),
+      about: data.about || (role === 'employer' ? `Official employer and industry partner recruiting talented graduates of St. Cecilia’s College.` : 'Excited to be part of the St. Cecilia’s College alumni and institutional community.'),
+      phone: data.phone || data.contactPhone || '+63 917 123 4567',
+      isVerified: role === 'employer' ? false : (data.isVerified ?? false),
       followersCount: 0,
       followingCount: 0,
       connectionsCount: 0,
       experience: [],
-      education: [
+      education: role === 'employer' ? [] : [
         {
           id: `edu_${Date.now()}`,
           degree: data.course || 'Bachelor Degree Program',
@@ -1055,9 +1093,24 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     setUsers((prev) => [newUser, ...prev]);
     setCurrentUserId(newUid);
     alumniService.createAlumni(newUser).catch((err) => {
-      console.warn('Error saving new alumni to Firestore:', err);
+      console.warn('Error saving new user to Firestore:', err);
     });
-    showToast(`Account registered successfully as ${newUser.role.toUpperCase()}!`);
+
+    if (role === 'employer') {
+      // Notify admins that employer registered and requires verification
+      const adminNotif: AppNotification = {
+        id: `notif_emp_reg_${Date.now()}`,
+        type: 'general',
+        title: '🏢 New Employer Partner Registered',
+        body: `${newUser.companyName || newUser.name} has registered and submitted an accreditation request for Admin Verification.`,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      setNotifications((prev) => [adminNotif, ...prev]);
+      showToast(`Company registered! Status: Pending Admin Verification.`, 'info');
+    } else {
+      showToast(`Account registered successfully as ${newUser.role.toUpperCase()}!`);
+    }
     return true;
   };
 
@@ -1932,26 +1985,235 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
     showToast('Announcement removed.');
   };
 
-  // Opportunities operations
+  // Opportunities & Career Portal Operations
   const createOpportunity = (
     data: Omit<Opportunity, 'id' | 'createdAt' | 'postedBy' | 'posterName' | 'status'>
   ) => {
     if (!currentUser) return;
+    const isPrivileged = ['admin', 'superadmin', 'staff', 'registrar', 'moderator'].includes(currentUser.role);
+    // If admin or privileged, auto-approve; if employer or alumni, requires admin approval
+    const initialApproval = isPrivileged ? 'approved' : 'pending_approval';
+
     const newOpp: Opportunity = {
       id: `opp_${Date.now()}`,
       ...data,
       postedBy: currentUser.uid,
-      posterName: `${currentUser.name} (${currentUser.course})`,
+      posterName: currentUser.role === 'employer' && currentUser.companyName ? currentUser.companyName : `${currentUser.name} (${currentUser.course || currentUser.role})`,
+      posterRole: currentUser.role,
+      approvalStatus: data.approvalStatus || initialApproval,
       createdAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      applicationsCount: 0
     };
+
     setOpportunities((prev) => [newOpp, ...prev]);
-    showToast('Career opportunity posted to alumni job board!');
+
+    if (newOpp.approvalStatus === 'pending_approval') {
+      showToast('Job posting submitted for Admin Approval! Status: Pending Approval.', 'info');
+      // Alert admin office
+      const adminNotif: AppNotification = {
+        id: `notif_job_pend_${Date.now()}`,
+        type: 'general',
+        title: '🔔 New Job Posting Awaiting Approval',
+        body: `${newOpp.company} submitted "${newOpp.title}" for review. Click to verify & approve.`,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      setNotifications((prev) => [adminNotif, ...prev]);
+    } else {
+      showToast('Career opportunity published to the Cecilian Job Board!', 'success');
+    }
+  };
+
+  const updateOpportunity = (id: string, data: Partial<Opportunity>) => {
+    setOpportunities((prev) => prev.map((o) => (o.id === id ? { ...o, ...data } : o)));
+    showToast('Job posting details updated.', 'success');
   };
 
   const deleteOpportunity = (id: string) => {
     setOpportunities((prev) => prev.filter((o) => o.id !== id));
     showToast('Opportunity removed.');
+  };
+
+  const approveOpportunity = (id: string) => {
+    const opp = opportunities.find((o) => o.id === id);
+    if (!opp) return;
+
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, approvalStatus: 'approved' } : o))
+    );
+
+    // Notify the job poster
+    const notif: AppNotification = {
+      id: `notif_job_appr_${Date.now()}`,
+      toUid: opp.postedBy,
+      type: 'general',
+      title: '✅ Job Posting Approved & Published!',
+      body: `Your job posting "${opp.title}" at ${opp.company} has been approved by the Alumni Office and is now live for all alumni.`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    showToast(`Approved "${opp.title}". Posting is now live.`, 'success');
+  };
+
+  const rejectOpportunity = (id: string, reason: string) => {
+    const opp = opportunities.find((o) => o.id === id);
+    if (!opp) return;
+
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === id ? { ...o, approvalStatus: 'rejected', rejectionReason: reason } : o))
+    );
+
+    // Notify the job poster
+    const notif: AppNotification = {
+      id: `notif_job_rej_${Date.now()}`,
+      toUid: opp.postedBy,
+      type: 'general',
+      title: '❌ Job Posting Needs Revision',
+      body: `Your job posting "${opp.title}" was declined by the Alumni Office. Reason: ${reason}`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    showToast(`Job posting "${opp.title}" rejected with feedback sent.`, 'info');
+  };
+
+  // Automated Match Calculation & Job Application
+  const applyForJob = (data: Omit<JobApplication, 'id' | 'appliedAt' | 'status'>): { success: boolean; error?: string } => {
+    if (!currentUser) return { success: false, error: 'Please log in to apply.' };
+
+    // Check duplicate
+    const existing = jobApplications.find((a) => a.jobId === data.jobId && a.applicantUid === currentUser.uid);
+    if (existing) {
+      showToast('You have already applied for this position.', 'info');
+      return { success: false, error: 'Already applied' };
+    }
+
+    const job = opportunities.find((o) => o.id === data.jobId);
+    
+    // Calculate Match Score
+    const reqCourse = (job?.requiredCourse || '').toLowerCase();
+    const applicantCourse = (data.applicantCourse || currentUser.course || '').toLowerCase();
+    const courseMatch = reqCourse ? applicantCourse.includes(reqCourse) || reqCourse.includes(applicantCourse) || reqCourse.includes('all') : true;
+
+    const jobSkills = job?.skills || [];
+    const applicantSkills = data.applicantSkills || currentUser.skills || [];
+    const matchedSkillsCount = jobSkills.filter((js) =>
+      applicantSkills.some((as) => as.toLowerCase().includes(js.toLowerCase()) || js.toLowerCase().includes(as.toLowerCase()))
+    ).length;
+
+    let score = 50; // base score
+    if (courseMatch) score += 25;
+    if (jobSkills.length > 0) {
+      score += Math.round((matchedSkillsCount / jobSkills.length) * 20);
+    } else {
+      score += 20;
+    }
+    if (data.applicantLocation && job?.location && (job.location.toLowerCase().includes('remote') || data.applicantLocation.toLowerCase().includes('cebu'))) {
+      score += 5;
+    }
+    const finalScore = Math.min(Math.max(score, 45), 98);
+
+    const newApp: JobApplication = {
+      ...data,
+      id: `app_${Date.now()}`,
+      appliedAt: new Date().toISOString(),
+      status: 'Applied',
+      matchScore: finalScore,
+      matchBreakdown: {
+        courseMatch,
+        skillsMatchCount: matchedSkillsCount,
+        totalSkillsCount: jobSkills.length,
+        locationMatch: true
+      }
+    };
+
+    setJobApplications((prev) => [newApp, ...prev]);
+
+    // Increment count on job
+    setOpportunities((prev) =>
+      prev.map((o) => (o.id === data.jobId ? { ...o, applicationsCount: (o.applicationsCount || 0) + 1 } : o))
+    );
+
+    // Notify employer / job poster
+    if (job) {
+      const employerNotif: AppNotification = {
+        id: `notif_app_recv_${Date.now()}`,
+        toUid: job.postedBy,
+        type: 'general',
+        title: `💼 New Application: ${job.title}`,
+        body: `${data.applicantName} (${data.applicantCourse || 'Cecilian Graduate'}) applied for "${job.title}" with a ${finalScore}% match score!`,
+        read: false,
+        createdAt: new Date().toISOString()
+      };
+      setNotifications((prev) => [employerNotif, ...prev]);
+    }
+
+    // Confirmation notif for applicant
+    const applicantNotif: AppNotification = {
+      id: `notif_app_sent_${Date.now()}`,
+      toUid: currentUser.uid,
+      type: 'general',
+      title: '🎯 Application Submitted Successfully',
+      body: `Your application for "${job?.title || 'Job'}" at ${job?.company || 'Company'} was submitted. (Profile Match: ${finalScore}%)`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications((prev) => [applicantNotif, ...prev]);
+
+    showToast(`Application submitted with ${finalScore}% automated profile match!`, 'success');
+    return { success: true };
+  };
+
+  const updateApplicationStatus = (applicationId: string, status: ApplicationStatus, notes?: string) => {
+    const app = jobApplications.find((a) => a.id === applicationId);
+    if (!app) return;
+
+    setJobApplications((prev) =>
+      prev.map((a) => (a.id === applicationId ? { ...a, status, statusNotes: notes || a.statusNotes } : a))
+    );
+
+    // Notify applicant
+    const notif: AppNotification = {
+      id: `notif_app_status_${Date.now()}`,
+      toUid: app.applicantUid,
+      type: 'general',
+      title: `Application Status Updated: ${status}`,
+      body: `Your application for "${app.jobTitle}" at ${app.companyName} is now: ${status}.${notes ? ` Note: ${notes}` : ''}`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    showToast(`Applicant status updated to "${status}".`, 'success');
+  };
+
+  const verifyEmployer = (employerUid: string, verified: boolean, notes?: string) => {
+    setUsers((prev) =>
+      prev.map((u) =>
+        u.uid === employerUid
+          ? {
+              ...u,
+              isVerified: verified,
+              employerVerificationStatus: verified ? 'verified' : 'rejected'
+            }
+          : u
+      )
+    );
+
+    const notif: AppNotification = {
+      id: `notif_emp_ver_${Date.now()}`,
+      toUid: employerUid,
+      type: 'general',
+      title: verified ? '🏢 Employer Verification Approved!' : 'Employer Verification Status Update',
+      body: verified
+        ? 'Congratulations! Your company has been verified by St. Cecilia’s College Alumni Office. You may now post career opportunities.'
+        : `Employer verification update: ${notes || 'Please contact alumni office for accreditation.'}`,
+      read: false,
+      createdAt: new Date().toISOString()
+    };
+    setNotifications((prev) => [notif, ...prev]);
+    showToast(verified ? 'Employer partner verified and accredited.' : 'Employer status updated.', 'info');
   };
 
   // Notifications operations
@@ -2377,7 +2639,14 @@ export const AlumniProvider: React.FC<{ children: ReactNode }> = ({ children }) 
         editAnnouncement,
         deleteAnnouncement,
         createOpportunity,
+        updateOpportunity,
         deleteOpportunity,
+        approveOpportunity,
+        rejectOpportunity,
+        applyForJob,
+        updateApplicationStatus,
+        verifyEmployer,
+        jobApplications,
         unreadNotificationsCount,
         markNotificationAsRead,
         markAllNotificationsAsRead,

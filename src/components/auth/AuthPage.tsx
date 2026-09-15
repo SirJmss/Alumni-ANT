@@ -21,7 +21,8 @@ import {
   Check,
   Copy,
   RefreshCw,
-  HelpCircle
+  HelpCircle,
+  FileSpreadsheet
 } from 'lucide-react';
 import { useAlumni } from '../../context/AlumniContext';
 import { UserRole, UserProfile, StudentVerificationRecord } from '../../types';
@@ -1155,9 +1156,20 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 
                       {/* Sample IDs for instant testing */}
                       <div className="p-3 bg-stone-50 border border-stone-200/80 rounded-xl space-y-1.5">
-                        <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">
-                          QUICK-SCREEN PRE-ACCREDITED ALUMNI IDS:
-                        </span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-stone-500 uppercase tracking-wider block">
+                            QUICK-SCREEN PRE-ACCREDITED ALUMNI IDS:
+                          </span>
+                          <a
+                            href="/sample_students_registry.csv"
+                            download="sample_students_registry.csv"
+                            className="text-[10px] font-bold text-[#8B181B] hover:underline flex items-center gap-1"
+                            title="Download CSV for testing or Registrar upload"
+                          >
+                            <FileSpreadsheet className="w-3 h-3" />
+                            <span>Download Sample CSV</span>
+                          </a>
+                        </div>
                         <div className="flex flex-wrap gap-1.5">
                           {quickScreeningIds.map((item) => (
                             <button

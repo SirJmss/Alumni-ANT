@@ -1,4 +1,4 @@
-export type UserRole = 'alumni' | 'student' | 'faculty' | 'admin' | 'registrar' | 'staff' | 'moderator' | 'superadmin';
+export type UserRole = 'alumni' | 'student' | 'faculty' | 'admin' | 'registrar' | 'staff' | 'moderator' | 'superadmin' | 'employer';
 
 export interface Experience {
   id: string;
@@ -64,6 +64,15 @@ export interface UserProfile {
   emailVerified?: boolean;
   lastProfileUpdateReminder?: string;
   lastEmploymentUpdateReminder?: string;
+  // Employer / Partner Company Specific Profile Fields
+  companyName?: string;
+  companyWebsite?: string;
+  companyIndustry?: string;
+  companyAddress?: string;
+  contactPerson?: string;
+  contactPhone?: string;
+  employerVerificationStatus?: 'pending_verification' | 'verified' | 'rejected';
+  employerVerificationNotes?: string;
 }
 
 export type FriendRequestStatus = 'pending' | 'accepted' | 'declined';
@@ -191,8 +200,48 @@ export interface Opportunity {
   contactEmail?: string;
   postedBy: string;
   posterName: string;
+  posterRole?: UserRole;
   createdAt: string;
   status: 'active' | 'closed';
+  // Automated matching & workflow fields
+  requiredCourse?: string; // e.g. 'BS Information Technology'
+  experienceLevel?: string; // e.g. '0–2 years', 'Fresh Graduate', '3–5 years'
+  approvalStatus?: 'pending_approval' | 'approved' | 'rejected';
+  rejectionReason?: string;
+  applicationDeadline?: string;
+  howToApply?: 'internal' | 'external' | 'both';
+  applicationsCount?: number;
+}
+
+export type ApplicationStatus = 'Applied' | 'Screening' | 'Interview' | 'Offer' | 'Hired' | 'Rejected';
+
+export interface JobApplication {
+  id: string;
+  jobId: string;
+  jobTitle: string;
+  companyName: string;
+  applicantUid: string;
+  applicantName: string;
+  applicantEmail: string;
+  applicantPhone?: string;
+  applicantCourse?: string;
+  applicantBatch?: string;
+  applicantSkills?: string[];
+  applicantLocation?: string;
+  portfolioUrl?: string;
+  resumeFileName?: string;
+  resumeSummary?: string;
+  coverLetter?: string;
+  status: ApplicationStatus;
+  statusNotes?: string;
+  appliedAt: string;
+  matchScore?: number;
+  matchBreakdown?: {
+    courseMatch: boolean;
+    skillsMatchCount: number;
+    totalSkillsCount: number;
+    locationMatch: boolean;
+  };
 }
 
 export interface Chapter {

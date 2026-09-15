@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { useAlumni } from '../../context/AlumniContext';
 import { Announcement } from '../../types';
+import { ShareModal, ShareItem } from '../common/ShareModal';
 
 export const AnnouncementsView: React.FC = () => {
   const {
@@ -26,6 +27,7 @@ export const AnnouncementsView: React.FC = () => {
   const [filterType, setFilterType] = useState<'all' | 'important'>('all');
   const [selectedAnnouncement, setSelectedAnnouncement] = useState<Announcement | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [shareItem, setShareItem] = useState<ShareItem | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -143,18 +145,36 @@ export const AnnouncementsView: React.FC = () => {
                 </span>
               </div>
 
-              {permissions.canDeleteAnnouncements && (
+              <div className="flex items-center gap-1.5">
                 <button
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    if (window.confirm('Delete this announcement?')) deleteAnnouncement(ann.id);
+                    setShareItem({
+                      title: ann.title,
+                      text: `${ann.title} — Official Announcement from St. Cecilia's College: ${ann.content.slice(0, 160)}...`,
+                      type: 'announcement'
+                    });
                   }}
-                  className="p-1 text-stone-400 hover:text-red-600 rounded"
-                  title="Delete Announcement"
+                  className="p-1.5 text-stone-400 hover:text-blue-600 hover:bg-stone-100 rounded-lg transition-colors"
+                  title="Share Announcement Across Apps"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Share2 className="w-4 h-4" />
                 </button>
-              )}
+
+                {permissions.canDeleteAnnouncements && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (window.confirm('Delete this announcement?')) deleteAnnouncement(ann.id);
+                    }}
+                    className="p-1.5 text-stone-400 hover:text-red-600 hover:bg-stone-100 rounded-lg transition-colors"
+                    title="Delete Announcement"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
 
             <h2 className="text-base sm:text-lg font-bold text-stone-900 mt-2 hover:text-blue-600">
@@ -226,10 +246,25 @@ export const AnnouncementsView: React.FC = () => {
                 {selectedAnnouncement.content}
               </div>
 
-              <div className="mt-8 pt-4 border-t border-stone-100 flex items-center justify-end">
+              <div className="mt-8 pt-4 border-t border-stone-100 flex items-center justify-between gap-3 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setShareItem({
+                      title: selectedAnnouncement.title,
+                      text: `${selectedAnnouncement.title} — Official Announcement from St. Cecilia's College: ${selectedAnnouncement.content.slice(0, 180)}...`,
+                      type: 'announcement'
+                    })
+                  }
+                  className="px-4 py-2 bg-stone-900 hover:bg-black text-white text-xs font-semibold rounded-xl flex items-center gap-2 shadow-2xs transition-colors"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>Share Across Apps</span>
+                </button>
+
                 <button
                   onClick={() => setSelectedAnnouncement(null)}
-                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-lg"
+                  className="px-4 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-xl"
                 >
                   Close Notice
                 </button>
@@ -326,6 +361,12 @@ export const AnnouncementsView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Cross-App Share Modal */}
+      <ShareModal
+        isOpen={!!shareItem}
+        onClose={() => setShareItem(null)}
+        item={shareItem || { title: '' }}
+      />
     </div>
   );
 };

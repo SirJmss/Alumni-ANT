@@ -10,7 +10,10 @@ import {
   Shield,
   ArrowRight,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Building2,
+  Phone,
+  Globe
 } from 'lucide-react';
 import { useAlumni } from '../../context/AlumniContext';
 import { UserRole } from '../../types';
@@ -31,19 +34,26 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [studentId, setStudentId] = useState('');
-  // Only alumni can self-register. Administrative and staff accounts are provisioned by system administrators.
-  const role: UserRole = 'alumni';
+  // Support both Alumni and Employer registration
+  const [role, setRole] = useState<'alumni' | 'employer'>('alumni');
   const [batch, setBatch] = useState('2024');
   const [course, setCourse] = useState('B.S. Information Technology');
   const [location, setLocation] = useState('Cebu, Philippines');
   const [headline, setHeadline] = useState('Alumni Member');
+
+  // Employer profile fields
+  const [companyName, setCompanyName] = useState('');
+  const [companyIndustry, setCompanyIndustry] = useState('Information Technology & Software');
+  const [companyWebsite, setCompanyWebsite] = useState('');
+  const [companyAddress, setCompanyAddress] = useState('Cebu IT Park, Cebu City');
+  const [contactPhone, setContactPhone] = useState('+63 917 123 4567');
 
   const [resetSent, setResetSent] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   // Real-time check if student details match the registrar masterlist
   const registryMatch = useMemo(() => {
-    if (!studentId.trim() && !name.trim() && !email.trim()) {
+    if (role !== 'alumni' || (!studentId.trim() && !name.trim() && !email.trim())) {
       return null;
     }
     const match = findRegistryMatch({
@@ -54,7 +64,7 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       course: course.trim()
     });
     return match.isMatched ? match : null;
-  }, [studentId, name, email, batch, course]);
+  }, [role, studentId, name, email, batch, course]);
 
   if (!isOpen) return null;
 
@@ -79,6 +89,11 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       return;
     }
 
+    if (role === 'employer' && !companyName.trim()) {
+      setErrorMsg('Company Name is required for employer registration.');
+      return;
+    }
+
     let isAutoVerified = false;
     let finalCourse = course;
     const finalStudentId = role === 'alumni' ? (studentId.trim() || `SC-${batch}-${Math.floor(1000 + Math.random() * 9000)}`) : undefined;
@@ -100,7 +115,7 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
         if (evaluation.matchedRecord?.course) {
           finalCourse = evaluation.matchedRecord.course;
         }
-        showToast(`🎉 Masterlist match confirmed! Valid registration granted direct verified access, bypassing manual review!`, 'success');
+        showToast(`🎉 Masterlist match confirmed! Valid registration granted direct verified access!`, 'success');
       } else if (evaluation.status === 'CONFLICT_FLAGGED') {
         isAutoVerified = false;
         showToast(`⚠️ Registration queued for manual review: ${evaluation.message}`, 'warning');
@@ -109,7 +124,8 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
         showToast('Registration submitted. Verification is pending Registrar review.', 'info');
       }
     } else {
-      isAutoVerified = true;
+      // Employer accounts start as pending verification
+      isAutoVerified = false;
     }
 
     register({
@@ -117,11 +133,17 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
       password,
       name,
       role,
-      batch,
-      course: finalCourse,
-      location,
-      headline: headline || `${finalCourse} Graduate`,
+      batch: role === 'alumni' ? batch : 'N/A',
+      course: role === 'alumni' ? finalCourse : 'Corporate Industry Partner',
+      location: role === 'employer' ? companyAddress : location,
+      headline: role === 'employer' ? `Hiring Partner • ${companyName}` : headline || `${finalCourse} Graduate`,
       studentId: finalStudentId,
+      companyName: role === 'employer' ? companyName : undefined,
+      companyIndustry: role === 'employer' ? companyIndustry : undefined,
+      companyWebsite: role === 'employer' ? companyWebsite : undefined,
+      companyAddress: role === 'employer' ? companyAddress : undefined,
+      contactPerson: role === 'employer' ? name : undefined,
+      contactPhone: role === 'employer' ? contactPhone : undefined,
       isVerified: isAutoVerified
     });
 
@@ -243,112 +265,212 @@ export const AuthModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({
 
           {mode === 'register' && (
             <form onSubmit={handleRegister} className="space-y-3">
-              <div>
-                <label className="font-semibold text-stone-700 block mb-1">Full Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Alex Chen"
-                  className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
-                />
-              </div>
-
-              {/* Alumni Registration Info Notice */}
-              <div className="flex items-center justify-between px-3 py-2 bg-stone-100/70 rounded-xl border border-stone-200 text-xs">
-                <span className="font-bold text-stone-700 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-[#991B1B]" />
-                  <span>Alumni Portal Registration</span>
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#991B1B]/10 text-[#991B1B]">
-                  Graduates Only
-                </span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">Graduation Batch *</label>
-                  <input
-                    type="text"
-                    required
-                    value={batch}
-                    onChange={(e) => setBatch(e.target.value)}
-                    placeholder="2024"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
-                  />
-                </div>
-
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">Course / Degree *</label>
-                  <input
-                    type="text"
-                    required
-                    value={course}
-                    onChange={(e) => setCourse(e.target.value)}
-                    placeholder="B.S. Information Technology"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="font-semibold text-stone-700 block text-xs">Student ID (for Instant Auto-Registration)</label>
-                  {registryMatch?.isMatched && (
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
-                      <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                      Matched Registrar Masterlist!
-                    </span>
-                  )}
-                </div>
-                <input
-                  type="text"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="e.g. SC-2020-0192"
-                  className={`w-full px-3 py-2 bg-stone-50 border rounded-xl font-mono text-sm ${
-                    registryMatch?.isMatched ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-stone-200'
+              {/* Account Type Selector */}
+              <div className="grid grid-cols-2 gap-2 p-1 bg-stone-100 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setRole('alumni')}
+                  className={`py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    role === 'alumni'
+                      ? 'bg-white text-stone-900 shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
                   }`}
-                />
-                {registryMatch?.isMatched ? (
-                  <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-xs flex items-start gap-1.5">
-                    <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                >
+                  <GraduationCap className="w-3.5 h-3.5 text-[#991B1B]" />
+                  <span>Alumnus / Student</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('employer')}
+                  className={`py-2 text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition-all ${
+                    role === 'employer'
+                      ? 'bg-white text-stone-900 shadow-xs'
+                      : 'text-stone-600 hover:text-stone-900'
+                  }`}
+                >
+                  <Building2 className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Employer Partner</span>
+                </button>
+              </div>
+
+              {role === 'alumni' ? (
+                <>
+                  <div>
+                    <label className="font-semibold text-stone-700 block mb-1">Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Juan Dela Cruz"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <span className="font-bold">Instant Auto-Registration Active: </span>
-                      <span>{registryMatch.record?.fullName} • {registryMatch.record?.course} ({registryMatch.record?.batchYear}). Automatically verified upon submission!</span>
+                      <label className="font-semibold text-stone-700 block mb-1">Graduation Batch *</label>
+                      <input
+                        type="text"
+                        required
+                        value={batch}
+                        onChange={(e) => setBatch(e.target.value)}
+                        placeholder="2024"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Course / Degree *</label>
+                      <input
+                        type="text"
+                        required
+                        value={course}
+                        onChange={(e) => setCourse(e.target.value)}
+                        placeholder="B.S. Information Technology"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
                     </div>
                   </div>
-                ) : (
-                  <p className="text-[10px] text-stone-500 mt-1">
-                    Matched records from the Registrar masterlist receive immediate verified alumni access.
-                  </p>
-                )}
-              </div>
 
-              <div className="grid grid-cols-2 gap-2">
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">Location</label>
-                  <input
-                    type="text"
-                    value={location}
-                    onChange={(e) => setLocation(e.target.value)}
-                    placeholder="Seattle, WA"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
-                  />
-                </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-stone-700 block text-xs">Student ID (Instant Auto-Registration)</label>
+                      {registryMatch?.isMatched && (
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                          Matched!
+                        </span>
+                      )}
+                    </div>
+                    <input
+                      type="text"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      placeholder="e.g. SC-2020-0192"
+                      className={`w-full px-3 py-2 bg-stone-50 border rounded-xl font-mono text-sm ${
+                        registryMatch?.isMatched ? 'border-emerald-500 ring-2 ring-emerald-500/20' : 'border-stone-200'
+                      }`}
+                    />
+                    {registryMatch?.isMatched ? (
+                      <div className="mt-1.5 p-2 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-900 text-xs flex items-start gap-1.5">
+                        <Sparkles className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                        <div>
+                          <span className="font-bold">Instant Auto-Registration Active: </span>
+                          <span>{registryMatch.record?.fullName} • Automatically verified!</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[10px] text-stone-500 mt-1">
+                        Matched records from the Registrar masterlist receive immediate verified access.
+                      </p>
+                    )}
+                  </div>
 
-                <div>
-                  <label className="font-semibold text-stone-700 block mb-1">Headline</label>
-                  <input
-                    type="text"
-                    value={headline}
-                    onChange={(e) => setHeadline(e.target.value)}
-                    placeholder="Product Manager"
-                    className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
-                  />
-                </div>
-              </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Location</label>
+                      <input
+                        type="text"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="Cebu, Philippines"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Headline</label>
+                      <input
+                        type="text"
+                        value={headline}
+                        onChange={(e) => setHeadline(e.target.value)}
+                        placeholder="e.g. Junior Web Developer"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* Employer Registration Fields */
+                <>
+                  <div className="p-2.5 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-900 leading-relaxed">
+                    <strong>Corporate Accreditation Notice:</strong> Employer accounts are reviewed and verified by the Alumni Office before job postings are published live.
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-stone-700 block mb-1">Company / Organization Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="e.g. ABC Technologies"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Industry Sector</label>
+                      <input
+                        type="text"
+                        value={companyIndustry}
+                        onChange={(e) => setCompanyIndustry(e.target.value)}
+                        placeholder="e.g. Information Technology"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Company Website</label>
+                      <input
+                        type="text"
+                        value={companyWebsite}
+                        onChange={(e) => setCompanyWebsite(e.target.value)}
+                        placeholder="https://abctech.example.com"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-stone-700 block mb-1">HR / Hiring Contact Person *</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g. Maria Santos (HR Director)"
+                      className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Company Address</label>
+                      <input
+                        type="text"
+                        value={companyAddress}
+                        onChange={(e) => setCompanyAddress(e.target.value)}
+                        placeholder="Cebu IT Park, Cebu City"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="font-semibold text-stone-700 block mb-1">Contact Phone</label>
+                      <input
+                        type="text"
+                        value={contactPhone}
+                        onChange={(e) => setContactPhone(e.target.value)}
+                        placeholder="+63 917 123 4567"
+                        className="w-full px-3 py-2 bg-stone-50 border border-stone-200 rounded-xl"
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="font-semibold text-stone-700 block mb-1">Email Address *</label>

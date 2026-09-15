@@ -27,12 +27,12 @@ class CeciliansAlumniApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         primaryColor: const Color(0xFF991B1B), // Institutional Crimson
+        scaffoldBackgroundColor: const Color(0xFFF9FAFB),
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF991B1B),
           primary: const Color(0xFF991B1B),
           secondary: const Color(0xFFD97706), // Warm Gold
           surface: Colors.white,
-          background: const Color(0xFFF9FAFB),
         ),
         appBarTheme: const AppBarTheme(
           backgroundColor: Colors.white,

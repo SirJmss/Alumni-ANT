@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { useAlumni } from '../../context/AlumniContext';
 import { AlumniEvent } from '../../types';
+import { ShareModal, ShareItem } from '../common/ShareModal';
 
 export const EventsView: React.FC = () => {
   const {
@@ -70,6 +71,7 @@ export const EventsView: React.FC = () => {
   const [formIsVirtual, setFormIsVirtual] = useState(false);
   const [formIsImportant, setFormIsImportant] = useState(false);
   const [formMaxAttendees, setFormMaxAttendees] = useState(250);
+  const [shareItem, setShareItem] = useState<ShareItem | null>(null);
 
   const now = new Date();
 
@@ -429,7 +431,24 @@ export const EventsView: React.FC = () => {
                       </span>
                     </button>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShareItem({
+                            title: evt.title,
+                            text: `${evt.title} — scheduled for ${new Date(evt.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at ${evt.location}. Join the St. Cecilia's Alumni Network!`,
+                            type: evt.type === 'reunion' ? 'reunion' : 'event'
+                          });
+                        }}
+                        className="flex items-center gap-1 text-xs text-stone-500 hover:text-blue-600 font-medium transition-colors"
+                        title="Share Event across apps"
+                      >
+                        <Share2 className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Share</span>
+                      </button>
+
                       <button
                         onClick={() => toggleLikeEvent(evt.id)}
                         className={`flex items-center gap-1 text-xs transition-colors ${
@@ -647,8 +666,24 @@ export const EventsView: React.FC = () => {
               <button
                 onClick={() => setSelectedEventForDetail(null)}
                 className="absolute top-4 right-4 p-1.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors"
+                title="Close"
               >
                 <X className="w-5 h-5" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShareItem({
+                    title: activeEvent.title,
+                    text: `${activeEvent.title} — scheduled for ${new Date(activeEvent.startDate).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })} at ${activeEvent.location}. St. Cecilia's College Alumni Network.`,
+                    type: activeEvent.type === 'reunion' ? 'reunion' : 'event'
+                  })
+                }
+                className="absolute top-4 right-14 p-1.5 bg-black/60 text-white rounded-full hover:bg-black/80 transition-colors"
+                title="Share Event Across Apps"
+              >
+                <Share2 className="w-5 h-5" />
               </button>
 
               <div className="absolute bottom-4 left-4 right-4 text-white">
@@ -1220,6 +1255,12 @@ export const EventsView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Cross-App Share Modal */}
+      <ShareModal
+        isOpen={!!shareItem}
+        onClose={() => setShareItem(null)}
+        item={shareItem || { title: '' }}
+      />
     </div>
   );
 };

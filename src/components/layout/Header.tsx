@@ -360,9 +360,15 @@ export const Header: React.FC<{
 
       {/* Digital Alumni Card (Banking Card Pass) Modal */}
       {showDigitalCardModal && currentUser && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-stone-900 border border-stone-800 rounded-3xl p-6 sm:p-7 max-w-lg w-full text-white shadow-2xl animate-in zoom-in-95">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-stone-800">
+        <div
+          className="fixed inset-0 z-[100] bg-black/85 backdrop-blur-sm overflow-y-auto flex items-center justify-center p-3 sm:p-5 animate-in fade-in"
+          onClick={() => setShowDigitalCardModal(false)}
+        >
+          <div
+            className="relative my-auto bg-stone-900 border border-stone-700/90 rounded-2xl sm:rounded-3xl p-4 sm:p-6 max-w-lg w-full text-white shadow-2xl max-h-[92vh] overflow-y-auto animate-in zoom-in-95"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 sm:pb-4 mb-4 border-b border-stone-800">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
                   <CreditCard className="w-5 h-5" />
@@ -380,15 +386,18 @@ export const Header: React.FC<{
                 type="button"
                 onClick={() => setShowDigitalCardModal(false)}
                 className="p-1.5 rounded-xl text-stone-400 hover:text-white hover:bg-stone-800 transition-colors"
+                title="Close"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <DigitalAlumniCard user={currentUser} />
+            <div className="py-1">
+              <DigitalAlumniCard user={currentUser} />
+            </div>
 
-            <div className="mt-5 pt-4 border-t border-stone-800 flex items-center justify-between text-xs text-stone-400">
-              <span>Card Status: <strong className="text-emerald-400 font-semibold">Active</strong></span>
+            <div className="mt-4 pt-3 border-t border-stone-800 flex items-center justify-between text-xs text-stone-400">
+              <span>Card Status: <strong className="text-emerald-400 font-semibold">Active & Verified</strong></span>
               <button
                 type="button"
                 onClick={() => {

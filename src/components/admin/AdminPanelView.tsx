@@ -34,7 +34,7 @@ import { AdminAutomationDashboard } from './AdminAutomationDashboard';
 import { RegistrarRegistryMatcher } from './RegistrarRegistryMatcher';
 import { AdminConflictResolutionView } from './AdminConflictResolutionView';
 import { AuditLogView } from './AuditLogView';
-import { CentenaryLongevityView } from './CentenaryLongevityView';
+import { JobModerationQueue } from '../opportunities/JobModerationQueue';
 import { getRegistrationConflicts } from '../../services/studentVerificationService';
 
 export const AdminPanelView: React.FC = () => {
@@ -55,10 +55,11 @@ export const AdminPanelView: React.FC = () => {
     addGalleryItem,
     deleteGalleryItem,
     automationJobs,
-    auditLogs
+    auditLogs,
+    opportunities
   } = useAlumni();
 
-  const [activeTab, setActiveTab] = useState<'users' | 'registry' | 'conflicts' | 'audit' | 'automations' | 'metrics' | 'milestones' | 'chapters' | 'gallery' | 'longevity'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'registry' | 'conflicts' | 'jobs' | 'audit' | 'automations' | 'metrics' | 'milestones' | 'chapters' | 'gallery'>('users');
   const [userSearch, setUserSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
 
@@ -70,6 +71,17 @@ export const AdminPanelView: React.FC = () => {
       return 0;
     }
   }, [activeTab]);
+
+  // Compute pending jobs and employers count for badge
+  const pendingJobsCount = useMemo(() => {
+    return (opportunities || []).filter((o) => o.status === 'pending_approval').length;
+  }, [opportunities]);
+
+  const pendingEmployersCount = useMemo(() => {
+    return (users || []).filter((u) => u.role === 'employer' && u.employerVerificationStatus === 'pending_verification').length;
+  }, [users]);
+
+  const totalCareerModerationPending = pendingJobsCount + pendingEmployersCount;
 
   // Provision User Modal (Admin only creates admin/staff accounts)
   const [showCreateUserModal, setShowCreateUserModal] = useState(false);
@@ -292,6 +304,37 @@ export const AdminPanelView: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setActiveTab('jobs')}
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'jobs'
+                    ? 'bg-[#991B1B] text-white shadow-xs'
+                    : 'text-stone-700 hover:text-stone-950 hover:bg-stone-100'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <Briefcase className={`w-4 h-4 ${activeTab === 'jobs' ? 'text-white' : 'text-blue-600'}`} />
+                  <span>Job & Employer Moderation</span>
+                </div>
+                {totalCareerModerationPending > 0 ? (
+                  <span
+                    className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
+                      activeTab === 'jobs' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-800 animate-pulse'
+                    }`}
+                  >
+                    {totalCareerModerationPending} Pending
+                  </span>
+                ) : (
+                  <span
+                    className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
+                      activeTab === 'jobs' ? 'bg-white/20 text-white' : 'bg-stone-100 text-stone-600'
+                    }`}
+                  >
+                    Active
+                  </span>
+                )}
+              </button>
+
+              <button
                 onClick={() => setActiveTab('audit')}
                 className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   activeTab === 'audit'
@@ -312,26 +355,6 @@ export const AdminPanelView: React.FC = () => {
                 </span>
               </button>
 
-              <button
-                onClick={() => setActiveTab('longevity')}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  activeTab === 'longevity'
-                    ? 'bg-[#991B1B] text-white shadow-xs'
-                    : 'text-stone-700 hover:text-stone-950 hover:bg-stone-100'
-                }`}
-              >
-                <div className="flex items-center gap-2.5">
-                  <Landmark className={`w-4 h-4 ${activeTab === 'longevity' ? 'text-white' : 'text-amber-600'}`} />
-                  <span>Centenary 100-Yr Vault</span>
-                </div>
-                <span
-                  className={`px-2 py-0.5 text-[10px] rounded-full font-bold ${
-                    activeTab === 'longevity' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-900 border border-amber-300'
-                  }`}
-                >
-                  100 Yrs
-                </span>
-              </button>
 
               <button
                 onClick={() => setActiveTab('automations')}
@@ -496,11 +519,12 @@ export const AdminPanelView: React.FC = () => {
       {/* TAB: REGISTRATION CONFLICT & DUPLICATE RESOLUTION */}
       {activeTab === 'conflicts' && <AdminConflictResolutionView />}
 
+      {/* TAB: CAREER & JOB POST MODERATION QUEUE */}
+      {activeTab === 'jobs' && <JobModerationQueue />}
+
       {/* TAB: AUDIT LOG & COMPLIANCE TRAIL */}
       {activeTab === 'audit' && <AuditLogView />}
 
-      {/* TAB: CENTENARY 100-YEAR VAULT & DURABILITY ARCHITECTURE */}
-      {activeTab === 'longevity' && <CentenaryLongevityView />}
 
       {/* TAB: AUTOMATIONS & SYSTEM OPS */}
       {activeTab === 'automations' && <AdminAutomationDashboard />}

@@ -23,7 +23,8 @@ import {
   where,
   orderBy,
   limit,
-  deleteDoc
+  deleteDoc,
+  writeBatch
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import {
@@ -473,23 +474,53 @@ export async function saveRegistryRecordToFirestore(record: StudentVerificationR
 }
 
 /**
- * Save multiple registry records in batch to Firestore
+ * Save multiple registry records in batch to Firestore using writeBatch
  */
 export async function saveRegistryRecordsBatchToFirestore(
-  records: StudentVerificationRecord[]
+  records: StudentVerificationRecord[],
+  onProgress?: (processed: number, total: number) => void
 ): Promise<{ added: number; updated: number }> {
   let count = 0;
+  if (!records || records.length === 0) return { added: 0, updated: 0 };
+
+  const CHUNK_SIZE = 400; // Under Firestore 500 writes limit per batch
+
   try {
-    for (const record of records) {
-      const docId = record.studentId.replace(/[\/\s]/g, '_');
-      const docRef = doc(db, FIRESTORE_COLLECTIONS.REGISTRY_RECORDS, docId);
-      const sanitized = JSON.parse(JSON.stringify(record));
-      await setDoc(docRef, sanitized, { merge: true });
-      count++;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      const batch = writeBatch(db);
+
+      for (const record of chunk) {
+        const docId = record.studentId.replace(/[\/\s]/g, '_').toUpperCase();
+        const docRef = doc(db, FIRESTORE_COLLECTIONS.REGISTRY_RECORDS, docId);
+        const sanitized = JSON.parse(JSON.stringify(record));
+        batch.set(docRef, sanitized, { merge: true });
+      }
+
+      await batch.commit();
+      count += chunk.length;
+      if (onProgress) {
+        onProgress(Math.min(count, records.length), records.length);
+      }
     }
     return { added: count, updated: 0 };
   } catch (err) {
-    console.warn('Failed to batch save registry records to Firestore:', err);
+    console.warn('Batch commit failed, falling back to sequential setDoc:', err);
+    // Fallback in case of batch failure
+    for (const record of records) {
+      try {
+        const docId = record.studentId.replace(/[\/\s]/g, '_').toUpperCase();
+        const docRef = doc(db, FIRESTORE_COLLECTIONS.REGISTRY_RECORDS, docId);
+        const sanitized = JSON.parse(JSON.stringify(record));
+        await setDoc(docRef, sanitized, { merge: true });
+        count++;
+        if (onProgress) {
+          onProgress(count, records.length);
+        }
+      } catch (innerErr) {
+        console.warn(`Failed to save record ${record.studentId} individually:`, innerErr);
+      }
+    }
     return { added: count, updated: 0 };
   }
 }
